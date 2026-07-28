@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">PromptOps LogParser</string>
+    <string name="open_file">Buka File Log</string>
+    <string name="filter_hint">Cari kata kunci...</string>
+    <string name="toggle_errors_only">Error/Exception saja</string>
+    <string name="empty_state">Belum ada file log dibuka.\nTekan tombol di atas untuk memilih file .txt / .log</string>
+    <string name="line_count_format">%1$d baris ditampilkan dari %2$d total</string>
+</resources>
