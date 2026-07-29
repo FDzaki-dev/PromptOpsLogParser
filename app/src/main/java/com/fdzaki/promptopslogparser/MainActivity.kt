@@ -17,6 +17,7 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.fdzaki.promptopslogparser.ai.AiLogAnalyzer
 import com.fdzaki.promptopslogparser.ai.ApiKeyStore
+import com.fdzaki.promptopslogparser.ai.LocalLogAnalyzer
 import com.fdzaki.promptopslogparser.databinding.ActivityMainBinding
 import com.fdzaki.promptopslogparser.scanner.ExtractedLog
 import com.fdzaki.promptopslogparser.scanner.LogPromptBuilder

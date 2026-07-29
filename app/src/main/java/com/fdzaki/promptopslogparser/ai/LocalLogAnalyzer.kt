@@ -5,6 +5,13 @@ import com.fdzaki.promptopslogparser.LogLevel
 import org.json.JSONArray
 import org.json.JSONObject
 
+/**
+ * Produces the exact same JSON schema as [AiLogAnalyzer] but computed entirely on-device
+ * with regex/heuristic rules — no network call, no API key, nol biaya (zero cost).
+ *
+ * Trade-off vs. the cloud version: less nuanced understanding of free-form text, but
+ * instant, private, and works with no internet connection at all.
+ */
 object LocalLogAnalyzer {
 
     private val timestampRegex = Regex(
