@@ -5,4 +5,17 @@
     <string name="toggle_errors_only">Error/Exception saja</string>
     <string name="empty_state">Belum ada file log dibuka.\nTekan tombol di atas untuk memilih file .txt / .log</string>
     <string name="line_count_format">%1$d baris ditampilkan dari %2$d total</string>
+    <string name="analyze_ai">Analisis AI (Cloud)</string>
+    <string name="analyze_local">Analisis Offline (Gratis)</string>
+    <string name="analyzing_ai">Menganalisis…</string>
+    <string name="api_key_dialog_title">Masukkan Anthropic API Key</string>
+    <string name="api_key_dialog_message">Diperlukan sekali saja. Key disimpan hanya di HP ini (SharedPreferences privat), tidak pernah dikirim ke server lain selain api.anthropic.com.</string>
+    <string name="api_key_hint">sk-ant-...</string>
+    <string name="save">Simpan</string>
+    <string name="cancel">Batal</string>
+    <string name="change_api_key">Ganti API Key</string>
+    <string name="ai_result_title">Hasil Analisis AI</string>
+    <string name="local_result_title">Hasil Analisis Offline</string>
+    <string name="close">Tutup</string>
+    <string name="help">Bantuan</string>
 </resources>

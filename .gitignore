@@ -11,4 +11,3 @@ local.properties
 release.keystore
 *.jks
 *.keystore
-release.keystore
