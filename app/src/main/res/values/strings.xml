@@ -18,4 +18,14 @@
     <string name="local_result_title">Hasil Analisis Offline</string>
     <string name="close">Tutup</string>
     <string name="help">Bantuan</string>
+    <string name="truncation_warning_display">⚠️ File terlalu besar: hanya %1$d dari %2$d baris yang dimuat &amp; ditampilkan.</string>
+    <string name="truncation_warning_ai_only">⚠️ File besar (%1$d baris): semua baris ditampilkan, tapi hanya sebagian dikirim ke Analisis AI.</string>
+    <string name="toast_file_empty">File kosong atau tidak dapat dibaca.</string>
+    <string name="toast_read_file_failed">Gagal membaca file: %1$s</string>
+    <string name="toast_zip_no_log_found">Tidak ada file .log/.txt di dalam ZIP \"%1$s\".</string>
+    <string name="toast_zip_loaded">Dimuat dari ZIP: %1$s</string>
+    <string name="toast_read_zip_failed">Gagal membaca ZIP: %1$s</string>
+    <string name="toast_open_file_first">Buka file log terlebih dahulu.</string>
+    <string name="toast_api_key_empty">API key tidak boleh kosong.</string>
+    <string name="toast_api_key_cleared">API key dihapus. Tekan Analisis AI lagi untuk memasukkan yang baru.</string>
 </resources>

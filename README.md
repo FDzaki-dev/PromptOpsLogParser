@@ -4,6 +4,15 @@ Aplikasi Android native offline untuk membaca, memfilter, dan merapikan file log
 (`.txt`, `.log`, logcat GitHub Actions) agar mudah dibaca di HP. Baris yang mengandung
 kata "Error"/"Exception"/"Fatal"/"Crash" disorot merah, dan "Warning"/"Deprecated" disorot kuning.
 
+## Fitur v1.5 — Batch 5: App Icon Final + Lokalisasi Inggris
+- **App icon baru**: chevron terminal `>` + 4 baris log dengan baris ERROR disorot merah,
+  konsisten di adaptive icon (Android 8+) maupun legacy fallback PNG (Android 7.0-7.1 / API 24-25)
+- **Lokalisasi bahasa Inggris** (`values-en/`): seluruh label UI & pesan Toast utama otomatis
+  berganti ke Inggris kalau bahasa sistem HP di-set ke Inggris — tanpa perlu setting manual di app
+- Semua Toast di `MainActivity.kt` dipindah dari hardcoded string ke `strings.xml` (lebih rapi & bisa diterjemahkan)
+- **Catatan cakupan**: teks dialog Troubleshooting/Bantuan dan pesan error jaringan di `AiLogAnalyzer`
+  masih Indonesia-only untuk saat ini (di luar prioritas batch ini)
+
 ## Fitur v1.0 (Initial Release)
 - Buka file log via Storage Access Framework (mendukung `.txt`, `.log`, dan file tanpa ekstensi seperti export logcat CI)
 - Parsing baris-per-baris sepenuhnya offline, tanpa izin storage klasik

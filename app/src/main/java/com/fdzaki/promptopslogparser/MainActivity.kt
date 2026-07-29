@@ -149,12 +149,13 @@ class MainActivity : AppCompatActivity() {
 
             applyFilterAndRender()
             updateAnalyzeButtonState()
+            updateTruncationWarning()
 
             if (entries.isEmpty()) {
-                Toast.makeText(this, "File kosong atau tidak dapat dibaca.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_file_empty), Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "Gagal membaca file: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_read_file_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -167,7 +168,7 @@ class MainActivity : AppCompatActivity() {
             if (extracted == null) {
                 Toast.makeText(
                     this,
-                    "Tidak ada file .log/.txt di dalam ZIP \"$fileName\".",
+                    getString(R.string.toast_zip_no_log_found, fileName),
                     Toast.LENGTH_LONG
                 ).show()
                 return
@@ -190,15 +191,15 @@ class MainActivity : AppCompatActivity() {
             currentExtractedLog = extracted
             applyFilterAndRender()
             updateAnalyzeButtonState()
+            updateTruncationWarning()
 
-            val truncatedNote = if (extracted.truncated) " (dipotong, file besar)" else ""
             Toast.makeText(
                 this,
-                "Dimuat dari ZIP: ${extracted.entryName}$truncatedNote",
+                getString(R.string.toast_zip_loaded, extracted.entryName),
                 Toast.LENGTH_SHORT
             ).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Gagal membaca ZIP: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_read_zip_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -237,7 +238,34 @@ class MainActivity : AppCompatActivity() {
         binding.rvLogLines.visibility = if (isEmpty) View.GONE else View.VISIBLE
         if (isEmpty) {
             binding.tvLineCount.text = ""
+            binding.tvTruncationWarning.visibility = View.GONE
         }
+    }
+
+    /**
+     * Peringatan persisten (bukan Toast sekilas) saat file log besar terpotong,
+     * supaya pengguna tidak salah menyimpulkan dari data yang tidak lengkap.
+     *
+     * Dua kasus dibedakan secara jujur:
+     * - ZIP besar: entri yang DITAMPILKAN di RecyclerView juga ikut terpotong
+     *   (karena ZipLogExtractor membatasi ukuran baca per-karakter).
+     * - File teks biasa: semua baris tetap tampil penuh, hanya isi yang dikirim
+     *   ke Analisis AI yang dipotong.
+     */
+    private fun updateTruncationWarning() {
+        val extracted = currentExtractedLog
+        if (extracted == null || !extracted.truncated) {
+            binding.tvTruncationWarning.visibility = View.GONE
+            return
+        }
+        val shown = allEntries.size
+        val total = extracted.lineCount
+        binding.tvTruncationWarning.text = if (shown < total) {
+            getString(R.string.truncation_warning_display, shown, total)
+        } else {
+            getString(R.string.truncation_warning_ai_only, total)
+        }
+        binding.tvTruncationWarning.visibility = View.VISIBLE
     }
 
     // ---------------------------------------------------------------------
@@ -252,7 +280,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun onAnalyzeLocalClicked() {
         if (allEntries.isEmpty()) {
-            Toast.makeText(this, "Buka file log terlebih dahulu.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_open_file_first), Toast.LENGTH_SHORT).show()
             return
         }
         val sourceName = currentExtractedLog?.entryName ?: "unknown"
@@ -262,7 +290,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun onAnalyzeAiClicked() {
         val extracted = currentExtractedLog ?: run {
-            Toast.makeText(this, "Buka file log terlebih dahulu.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_open_file_first), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -333,7 +361,7 @@ class MainActivity : AppCompatActivity() {
                 if (key.isNotBlank()) {
                     onSaved(key)
                 } else {
-                    Toast.makeText(this, "API key tidak boleh kosong.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.toast_api_key_empty), Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton(R.string.cancel) { dialog, _ -> dialog.dismiss() }
@@ -367,7 +395,7 @@ class MainActivity : AppCompatActivity() {
             builder.setNeutralButton(R.string.change_api_key) { dialog, _ ->
                 dialog.dismiss()
                 ApiKeyStore.clearApiKey(this)
-                Toast.makeText(this, "API key dihapus. Tekan Analisis AI lagi untuk memasukkan yang baru.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.toast_api_key_cleared), Toast.LENGTH_LONG).show()
             }
         }
         builder.show()

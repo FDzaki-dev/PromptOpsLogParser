@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">PromptOps LogParser</string>
+    <string name="open_file">Open Log File</string>
+    <string name="filter_hint">Search keyword...</string>
+    <string name="toggle_errors_only">Errors/Exceptions only</string>
+    <string name="empty_state">No log file opened yet.\nTap the button above to pick a .txt / .log file</string>
+    <string name="line_count_format">%1$d of %2$d lines shown</string>
+    <string name="analyze_ai">AI Analysis (Cloud)</string>
+    <string name="analyze_local">Offline Analysis (Free)</string>
+    <string name="analyzing_ai">Analyzing…</string>
+    <string name="api_key_dialog_title">Enter Anthropic API Key</string>
+    <string name="api_key_dialog_message">Needed once. The key is stored only on this device (private SharedPreferences), and is never sent anywhere except api.anthropic.com.</string>
+    <string name="api_key_hint">sk-ant-...</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="change_api_key">Change API Key</string>
+    <string name="ai_result_title">AI Analysis Result</string>
+    <string name="local_result_title">Offline Analysis Result</string>
+    <string name="close">Close</string>
+    <string name="help">Help</string>
+    <string name="truncation_warning_display">⚠️ File too large: only %1$d of %2$d lines were loaded &amp; shown.</string>
+    <string name="truncation_warning_ai_only">⚠️ Large file (%1$d lines): all lines are shown, but only part of it was sent to AI Analysis.</string>
+    <string name="toast_file_empty">File is empty or could not be read.</string>
+    <string name="toast_read_file_failed">Failed to read file: %1$s</string>
+    <string name="toast_zip_no_log_found">No .log/.txt file found inside ZIP \"%1$s\".</string>
+    <string name="toast_zip_loaded">Loaded from ZIP: %1$s</string>
+    <string name="toast_read_zip_failed">Failed to read ZIP: %1$s</string>
+    <string name="toast_open_file_first">Open a log file first.</string>
+    <string name="toast_api_key_empty">API key cannot be empty.</string>
+    <string name="toast_api_key_cleared">API key removed. Tap AI Analysis again to enter a new one.</string>
+</resources>
