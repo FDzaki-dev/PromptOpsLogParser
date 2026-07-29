@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Mengecualikan SharedPreferences penyimpan API key (baik versi terenkripsi
+  maupun fallback) dari cloud backup & device-to-device transfer (Android 12+).
+  Alasan: kunci AES yang membungkus EncryptedSharedPreferences terikat ke
+  Android Keystore perangkat asal — jika file di-restore ke perangkat lain,
+  isinya tidak bisa didekripsi lagi (baca akan gagal, ditangani ApiKeyStore
+  dengan aman, tapi lebih baik dicegah sejak awal agar tidak ada file "mati").
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="promptops_secure_prefs.xml" />
+        <exclude domain="sharedpref" path="promptops_secure_prefs_fallback.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="promptops_secure_prefs.xml" />
+        <exclude domain="sharedpref" path="promptops_secure_prefs_fallback.xml" />
+    </device-transfer>
+</data-extraction-rules>

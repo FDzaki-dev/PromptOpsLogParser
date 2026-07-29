@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aturan backup untuk Android < 12 (fullBackupContent). -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="promptops_secure_prefs.xml" />
+    <exclude domain="sharedpref" path="promptops_secure_prefs_fallback.xml" />
+</full-backup-content>

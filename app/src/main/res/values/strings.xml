@@ -18,4 +18,6 @@
     <string name="local_result_title">Hasil Analisis Offline</string>
     <string name="close">Tutup</string>
     <string name="help">Bantuan</string>
+    <string name="truncation_warning_display">⚠️ File terlalu besar: hanya %1$d dari %2$d baris yang dimuat &amp; ditampilkan.</string>
+    <string name="truncation_warning_ai_only">⚠️ File besar (%1$d baris): semua baris ditampilkan, tapi hanya sebagian dikirim ke Analisis AI.</string>
 </resources>

@@ -149,6 +149,7 @@ class MainActivity : AppCompatActivity() {
 
             applyFilterAndRender()
             updateAnalyzeButtonState()
+            updateTruncationWarning()
 
             if (entries.isEmpty()) {
                 Toast.makeText(this, "File kosong atau tidak dapat dibaca.", Toast.LENGTH_SHORT).show()
@@ -190,11 +191,11 @@ class MainActivity : AppCompatActivity() {
             currentExtractedLog = extracted
             applyFilterAndRender()
             updateAnalyzeButtonState()
+            updateTruncationWarning()
 
-            val truncatedNote = if (extracted.truncated) " (dipotong, file besar)" else ""
             Toast.makeText(
                 this,
-                "Dimuat dari ZIP: ${extracted.entryName}$truncatedNote",
+                "Dimuat dari ZIP: ${extracted.entryName}",
                 Toast.LENGTH_SHORT
             ).show()
         } catch (e: Exception) {
@@ -237,7 +238,34 @@ class MainActivity : AppCompatActivity() {
         binding.rvLogLines.visibility = if (isEmpty) View.GONE else View.VISIBLE
         if (isEmpty) {
             binding.tvLineCount.text = ""
+            binding.tvTruncationWarning.visibility = View.GONE
         }
+    }
+
+    /**
+     * Peringatan persisten (bukan Toast sekilas) saat file log besar terpotong,
+     * supaya pengguna tidak salah menyimpulkan dari data yang tidak lengkap.
+     *
+     * Dua kasus dibedakan secara jujur:
+     * - ZIP besar: entri yang DITAMPILKAN di RecyclerView juga ikut terpotong
+     *   (karena ZipLogExtractor membatasi ukuran baca per-karakter).
+     * - File teks biasa: semua baris tetap tampil penuh, hanya isi yang dikirim
+     *   ke Analisis AI yang dipotong.
+     */
+    private fun updateTruncationWarning() {
+        val extracted = currentExtractedLog
+        if (extracted == null || !extracted.truncated) {
+            binding.tvTruncationWarning.visibility = View.GONE
+            return
+        }
+        val shown = allEntries.size
+        val total = extracted.lineCount
+        binding.tvTruncationWarning.text = if (shown < total) {
+            getString(R.string.truncation_warning_display, shown, total)
+        } else {
+            getString(R.string.truncation_warning_ai_only, total)
+        }
+        binding.tvTruncationWarning.visibility = View.VISIBLE
     }
 
     // ---------------------------------------------------------------------
