@@ -6,4 +6,5 @@
     <color name="accent">#4FC3F7</color>
     <color name="error_red">#FF5252</color>
     <color name="warning_yellow">#FFCA28</color>
+    <color name="custom_purple">#BA68C8</color>
 </resources>

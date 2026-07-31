@@ -38,6 +38,7 @@ class LogAdapter : RecyclerView.Adapter<LogAdapter.LogViewHolder>() {
                 when (entry.level) {
                     LogLevel.ERROR -> Color.parseColor("#FF5252")
                     LogLevel.WARNING -> Color.parseColor("#FFCA28")
+                    LogLevel.CUSTOM -> Color.parseColor("#BA68C8")
                     LogLevel.NORMAL -> Color.parseColor("#E0E0E0")
                 }
             )

@@ -28,4 +28,21 @@
     <string name="toast_open_file_first">Buka file log terlebih dahulu.</string>
     <string name="toast_api_key_empty">API key tidak boleh kosong.</string>
     <string name="toast_api_key_cleared">API key dihapus. Tekan Analisis AI lagi untuk memasukkan yang baru.</string>
+    <string name="custom_keywords_button">Kata Kunci</string>
+    <string name="history_button">Riwayat</string>
+    <string name="custom_keywords_dialog_title">Kata Kunci Custom</string>
+    <string name="custom_keywords_dialog_message">Baris yang mengandung kata ini (pisahkan dengan koma) akan disorot ungu, di luar Error/Warning bawaan. Contoh: NullPointerException, Timeout, nama_module_anda</string>
+    <string name="custom_keywords_hint">contoh: OutOfMemory, Timeout, MyModule</string>
+    <string name="history_dialog_title">Riwayat Analisis</string>
+    <string name="history_empty">Belum ada riwayat analisis. Jalankan Analisis Offline atau AI terlebih dahulu.</string>
+    <string name="clear_history">Hapus Riwayat</string>
+    <string name="crash_detected_title">⚠️ Crash Terakhir Terdeteksi</string>
+    <string name="no_crash_detected">Tidak ada crash tercatat sejak terakhir dihapus. Bagus!</string>
+    <string name="recent_events_title">Kejadian Terbaru</string>
+    <string name="no_recent_events">Tidak ada kejadian tercatat.</string>
+    <string name="copy_to_clipboard">Copy ke Clipboard</string>
+    <string name="clear">Hapus</string>
+    <string name="copied_toast">Disalin ke clipboard.</string>
+    <string name="history_cleared_toast">Riwayat analisis dihapus.</string>
+    <string name="events_cleared_toast">Kejadian terbaru dihapus.</string>
 </resources>

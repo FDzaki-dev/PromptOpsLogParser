@@ -28,4 +28,21 @@
     <string name="toast_open_file_first">Open a log file first.</string>
     <string name="toast_api_key_empty">API key cannot be empty.</string>
     <string name="toast_api_key_cleared">API key removed. Tap AI Analysis again to enter a new one.</string>
+    <string name="custom_keywords_button">Keywords</string>
+    <string name="history_button">History</string>
+    <string name="custom_keywords_dialog_title">Custom Keywords</string>
+    <string name="custom_keywords_dialog_message">Lines containing these words (comma-separated) get a purple highlight, on top of the built-in Error/Warning rules. Example: NullPointerException, Timeout, your_module_name</string>
+    <string name="custom_keywords_hint">e.g.: OutOfMemory, Timeout, MyModule</string>
+    <string name="history_dialog_title">Analysis History</string>
+    <string name="history_empty">No analysis history yet. Run an Offline or AI Analysis first.</string>
+    <string name="clear_history">Clear History</string>
+    <string name="crash_detected_title">⚠️ Last Crash Detected</string>
+    <string name="no_crash_detected">No crash recorded since it was last cleared. Nice!</string>
+    <string name="recent_events_title">Recent Events</string>
+    <string name="no_recent_events">No events recorded.</string>
+    <string name="copy_to_clipboard">Copy to Clipboard</string>
+    <string name="clear">Clear</string>
+    <string name="copied_toast">Copied to clipboard.</string>
+    <string name="history_cleared_toast">Analysis history cleared.</string>
+    <string name="events_cleared_toast">Recent events cleared.</string>
 </resources>

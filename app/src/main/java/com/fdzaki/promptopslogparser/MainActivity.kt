@@ -1,11 +1,15 @@
 package com.fdzaki.promptopslogparser
 
 import android.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -16,9 +20,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.documentfile.provider.DocumentFile
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.fdzaki.promptopslogparser.ai.AiLogAnalyzer
+import com.fdzaki.promptopslogparser.ai.AnalysisHistoryStore
 import com.fdzaki.promptopslogparser.ai.ApiKeyStore
 import com.fdzaki.promptopslogparser.ai.LocalLogAnalyzer
 import com.fdzaki.promptopslogparser.databinding.ActivityMainBinding
+import com.fdzaki.promptopslogparser.diagnostics.AppDiagnostics
 import com.fdzaki.promptopslogparser.scanner.ExtractedLog
 import com.fdzaki.promptopslogparser.scanner.LogPromptBuilder
 import com.fdzaki.promptopslogparser.scanner.ZipLogExtractor
@@ -48,6 +54,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Holds the raw text + metadata of whatever was last loaded, used to build the AI prompt. */
     private var currentExtractedLog: ExtractedLog? = null
+
+    /** User-defined highlight keywords (Batch 3), loaded from [CustomKeywordStore]. */
+    private var customKeywords: List<String> = emptyList()
 
     private val openDocumentLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -95,6 +104,16 @@ class MainActivity : AppCompatActivity() {
             showTroubleshootingDialog()
         }
 
+        binding.btnCustomKeywords.setOnClickListener {
+            showCustomKeywordsDialog()
+        }
+
+        binding.btnHistory.setOnClickListener {
+            showHistoryDialog()
+        }
+
+        customKeywords = CustomKeywordStore.getKeywords(this)
+
         renderEmptyState(true)
     }
 
@@ -128,7 +147,7 @@ class MainActivity : AppCompatActivity() {
                             LogEntry(
                                 lineNumber = lineNumber,
                                 rawText = cleaned,
-                                level = LogClassifier.classify(cleaned)
+                                level = LogClassifier.classify(cleaned, customKeywords)
                             )
                         )
                         if (contentBuilder.length < 200_000) {
@@ -155,6 +174,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, getString(R.string.toast_file_empty), Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
+            AppDiagnostics.logEvent(this, "Gagal baca file teks: ${e.message}")
             Toast.makeText(this, getString(R.string.toast_read_file_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
@@ -183,7 +203,7 @@ class MainActivity : AppCompatActivity() {
                 LogEntry(
                     lineNumber = index + 1,
                     rawText = line,
-                    level = LogClassifier.classify(line)
+                    level = LogClassifier.classify(line, customKeywords)
                 )
             }
 
@@ -199,6 +219,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_SHORT
             ).show()
         } catch (e: Exception) {
+            AppDiagnostics.logEvent(this, "Gagal baca ZIP: ${e.message}")
             Toast.makeText(this, getString(R.string.toast_read_zip_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
@@ -216,7 +237,7 @@ class MainActivity : AppCompatActivity() {
         var filtered = allEntries
 
         if (showErrorsOnly) {
-            filtered = filtered.filter { it.level == LogLevel.ERROR }
+            filtered = filtered.filter { it.level == LogLevel.ERROR || it.level == LogLevel.CUSTOM }
         }
 
         if (currentFilterText.isNotBlank()) {
@@ -231,6 +252,14 @@ class MainActivity : AppCompatActivity() {
             allEntries.size
         )
         renderEmptyState(false)
+    }
+
+    /** Re-runs classification on already-loaded entries after custom keywords change,
+     *  without needing to re-open/re-read the source file. */
+    private fun reclassifyCurrentEntries() {
+        if (allEntries.isEmpty()) return
+        allEntries = allEntries.map { it.copy(level = LogClassifier.classify(it.rawText, customKeywords)) }
+        applyFilterAndRender()
     }
 
     private fun renderEmptyState(isEmpty: Boolean) {
@@ -285,6 +314,7 @@ class MainActivity : AppCompatActivity() {
         }
         val sourceName = currentExtractedLog?.entryName ?: "unknown"
         val jsonResult = LocalLogAnalyzer.analyze(allEntries, sourceName)
+        recordAnalysisHistory(sourceName, "Offline (Gratis)", jsonResult)
         showResultDialog(getString(R.string.local_result_title), jsonResult, showChangeKeyOption = false)
     }
 
@@ -312,9 +342,12 @@ class MainActivity : AppCompatActivity() {
         AiLogAnalyzer.analyze(prompt, apiKey) { result ->
             setAnalyzingUi(false)
             when (result) {
-                is AiLogAnalyzer.AnalyzeResult.Success ->
+                is AiLogAnalyzer.AnalyzeResult.Success -> {
+                    recordAnalysisHistory(extracted.entryName, "AI (Cloud)", result.jsonText)
                     showResultDialog(getString(R.string.ai_result_title), result.jsonText, showChangeKeyOption = true)
+                }
                 is AiLogAnalyzer.AnalyzeResult.Error -> {
+                    AppDiagnostics.logEvent(this, "Analisis AI gagal: ${result.message}")
                     Toast.makeText(this, result.message, Toast.LENGTH_LONG).show()
                     // If it looks like an auth problem, let the user re-enter the key.
                     if (result.message.contains("401") || result.message.contains("authentication", true)) {
@@ -322,6 +355,21 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
+        }
+    }
+
+    /** Parses the shared JSON schema (execution_status / summary_metrics.error_count)
+     *  from either analysis engine and appends it to [AnalysisHistoryStore]. */
+    private fun recordAnalysisHistory(sourceName: String, engine: String, jsonText: String) {
+        try {
+            val json = JSONObject(jsonText)
+            val extracted = json.getJSONObject("extracted_data")
+            val status = extracted.optString("execution_status", "UNKNOWN")
+            val errorCount = extracted.optJSONObject("summary_metrics")?.optInt("error_count", 0) ?: 0
+            AnalysisHistoryStore.add(this, sourceName, engine, status, errorCount)
+        } catch (e: Exception) {
+            // If the JSON shape is unexpected (e.g. AI didn't follow schema), just skip history
+            // rather than breaking the result dialog the user is about to see.
         }
     }
 
@@ -390,6 +438,10 @@ class MainActivity : AppCompatActivity() {
             .setTitle(title)
             .setView(scrollView)
             .setPositiveButton(R.string.close) { dialog, _ -> dialog.dismiss() }
+            .setNegativeButton(R.string.copy_to_clipboard) { dialog, _ ->
+                copyToClipboard(title, pretty)
+                dialog.dismiss()
+            }
 
         if (showChangeKeyOption) {
             builder.setNeutralButton(R.string.change_api_key) { dialog, _ ->
@@ -401,11 +453,58 @@ class MainActivity : AppCompatActivity() {
         builder.show()
     }
 
+    private fun copyToClipboard(label: String, text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+        Toast.makeText(this, getString(R.string.copied_toast), Toast.LENGTH_SHORT).show()
+    }
+
     // ---------------------------------------------------------------------
     // Troubleshooting / Bantuan
     // ---------------------------------------------------------------------
 
     private fun showTroubleshootingDialog() {
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, padding / 2, padding, padding)
+        }
+
+        // -- Dynamic section: last crash (if any) --------------------------------
+        val lastCrash = AppDiagnostics.getLastCrash(this)
+        if (lastCrash != null) {
+            addSectionHeader(container, getString(R.string.crash_detected_title), padding)
+            addSectionBody(container, lastCrash.take(600))
+            val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            btnRow.addView(Button(this).apply {
+                text = getString(R.string.copy_to_clipboard)
+                setOnClickListener { copyToClipboard(getString(R.string.crash_detected_title), lastCrash) }
+            })
+            btnRow.addView(Button(this).apply {
+                text = getString(R.string.clear)
+                setOnClickListener {
+                    AppDiagnostics.clearLastCrash(this@MainActivity)
+                    Toast.makeText(this@MainActivity, getString(R.string.no_crash_detected), Toast.LENGTH_SHORT).show()
+                }
+            })
+            container.addView(btnRow)
+        }
+
+        // -- Dynamic section: recent non-fatal events -----------------------------
+        val recentEvents = AppDiagnostics.getRecentEvents(this)
+        if (recentEvents.isNotEmpty()) {
+            addSectionHeader(container, getString(R.string.recent_events_title), padding)
+            addSectionBody(container, recentEvents.take(10).joinToString("\n"))
+            container.addView(Button(this).apply {
+                text = getString(R.string.clear)
+                setOnClickListener {
+                    AppDiagnostics.clearRecentEvents(this@MainActivity)
+                    Toast.makeText(this@MainActivity, getString(R.string.events_cleared_toast), Toast.LENGTH_SHORT).show()
+                }
+            })
+        }
+
+        // -- Static FAQ ------------------------------------------------------------
         val faq = listOf(
             "File tidak mau terbuka / \"Gagal membaca file\"" to
                 "Pastikan file berformat .txt, .log, atau .zip. Jika dari GitHub Actions, unduh " +
@@ -436,11 +535,6 @@ class MainActivity : AppCompatActivity() {
                 "Jangan pernah pakai --force kecuali Anda yakin ingin menimpa riwayat remote."
         )
 
-        val padding = (16 * resources.displayMetrics.density).toInt()
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(padding, padding / 2, padding, padding)
-        }
         faq.forEach { (question, answer) ->
             val q = TextView(this).apply {
                 text = question
@@ -463,6 +557,118 @@ class MainActivity : AppCompatActivity() {
             .setTitle(R.string.help)
             .setView(scrollView)
             .setPositiveButton(R.string.close) { dialog, _ -> dialog.dismiss() }
+            .show()
+    }
+
+    private fun addSectionHeader(container: LinearLayout, title: String, padding: Int) {
+        container.addView(TextView(this).apply {
+            text = title
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(resources.getColor(R.color.warning_yellow, theme))
+            textSize = 15f
+            setPadding(0, padding, 0, padding / 4)
+        })
+    }
+
+    private fun addSectionBody(container: LinearLayout, body: String) {
+        container.addView(TextView(this).apply {
+            text = body
+            typeface = android.graphics.Typeface.MONOSPACE
+            setTextColor(resources.getColor(R.color.text_secondary, theme))
+            textSize = 11f
+            setTextIsSelectable(true)
+        })
+    }
+
+    // ---------------------------------------------------------------------
+    // Custom Keywords (Batch 3)
+    // ---------------------------------------------------------------------
+
+    private fun showCustomKeywordsDialog() {
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, padding, padding, padding)
+        }
+        val messageView = TextView(this).apply {
+            text = getString(R.string.custom_keywords_dialog_message)
+            setTextColor(resources.getColor(R.color.text_secondary, theme))
+            textSize = 13f
+            setPadding(0, 0, 0, padding)
+        }
+        val input = EditText(this).apply {
+            hint = getString(R.string.custom_keywords_hint)
+            setText(customKeywords.joinToString(", "))
+        }
+        container.addView(messageView)
+        container.addView(input)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.custom_keywords_dialog_title)
+            .setView(container)
+            .setPositiveButton(R.string.save) { dialog, _ ->
+                val keywords = input.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                CustomKeywordStore.saveKeywords(this, keywords)
+                customKeywords = keywords
+                reclassifyCurrentEntries()
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.cancel) { dialog, _ -> dialog.dismiss() }
+            .show()
+    }
+
+    // ---------------------------------------------------------------------
+    // Analysis History (Batch 3)
+    // ---------------------------------------------------------------------
+
+    private fun showHistoryDialog() {
+        val entries = AnalysisHistoryStore.getAll(this)
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, padding / 2, padding, padding)
+        }
+
+        if (entries.isEmpty()) {
+            container.addView(TextView(this).apply {
+                text = getString(R.string.history_empty)
+                setTextColor(resources.getColor(R.color.text_secondary, theme))
+                textSize = 13f
+            })
+        } else {
+            entries.forEach { entry ->
+                val statusColor = when (entry.status) {
+                    "FAILED" -> R.color.error_red
+                    "WARNING" -> R.color.warning_yellow
+                    "SUCCESS" -> R.color.accent
+                    else -> R.color.text_secondary
+                }
+                container.addView(TextView(this).apply {
+                    text = "${entry.timestamp} — ${entry.sourceName}"
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(resources.getColor(R.color.text_primary, theme))
+                    textSize = 13f
+                    setPadding(0, padding / 2, 0, 0)
+                })
+                container.addView(TextView(this).apply {
+                    text = "${entry.engine} · ${entry.status} · ${entry.errorCount} error"
+                    setTextColor(resources.getColor(statusColor, theme))
+                    textSize = 12f
+                })
+            }
+        }
+
+        val scrollView = ScrollView(this).apply { addView(container) }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.history_dialog_title)
+            .setView(scrollView)
+            .setPositiveButton(R.string.close) { dialog, _ -> dialog.dismiss() }
+            .setNegativeButton(R.string.clear_history) { dialog, _ ->
+                AnalysisHistoryStore.clear(this)
+                Toast.makeText(this, getString(R.string.history_cleared_toast), Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
             .show()
     }
 }
