@@ -8,9 +8,11 @@
 > Daftar file terkini → `FILE_MANIFEST.txt`.
 
 ## Versi & Batch Terakhir
-- Versi: **v1.7** (versionCode 8)
-- Batch terakhir selesai: **2a** — Recent Files + Save/Share hasil analisis
-- Batch berikutnya: **2b** (Regex search + Badge counter), lalu **2c** (Settings screen + Light mode)
+- Versi: **v1.8** (versionCode 9)
+- Batch terakhir selesai: bugfix root-cause-hilang di hasil analisis (di luar urutan roadmap
+  batch normal — dikerjakan karena laporan bug langsung dari user, lihat CHANGELOG.md)
+- Batch roadmap berikutnya masih: **2b** (Regex search + Badge counter), lalu **2c**
+  (Settings screen + Light mode) — belum tersentuh oleh fix v1.8 ini
 
 ## Insiden & Pelajaran (kronologis — JANGAN dihapus, ini riwayat pencegahan regresi)
 - **2026-08-01**: ZIP v1.7 pertama dikirim TANPA dibungkus folder `PromptOpsLogParser/` di
@@ -40,6 +42,13 @@
 - Tema saat ini hardcode dark (`bg_dark` dst di `themes.xml`) walau parent theme
   `DayNight` — Light Mode BELUM benar-benar wired. Itu bagian dari Batch 2c nanti, jangan
   diasumsikan sudah ada.
+- **(v1.8)** `ZipLogExtractor.readEntryCapped()` memotong file besar dengan strategi
+  **HEAD (100KB) + TAIL (100KB)**, BUKAN head-only. Ini disengaja — jangan disederhanakan
+  balik ke head-only, karena error/exception utama di log CI/build hampir selalu ada di
+  bagian akhir file. Total budget tetap 200KB (sama seperti sebelumnya), cuma dibagi dua.
+- **(v1.8)** `LocalLogAnalyzer.selectCriticalEvents()` melakukan dedup pesan error identik
+  lalu sampling head+tail (40%/60%) kalau masih di atas `MAX_CRITICAL_EVENTS` (25). Jangan
+  dikembalikan ke `.take(25)` polos — itu penyebab bug root-cause-hilang yang sudah diperbaiki.
 
 ## Struktur Package
 - `com.fdzaki.promptopslogparser` (root): `MainActivity`, `LogEntry` (+`LogLevel`+

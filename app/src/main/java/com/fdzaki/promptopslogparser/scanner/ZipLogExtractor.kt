@@ -25,7 +25,16 @@ data class ExtractedLog(
  */
 object ZipLogExtractor {
 
-    private const val MAX_CHARS = 200_000 // ~200 KB of text, plenty for a log prompt
+    // Total budget stays 200 KB (same as before) so memory footprint and AI prompt cost
+    // don't regress — but it's now split HEAD + TAIL instead of head-only. Root cause in
+    // CI/build logs (GitHub Actions, Gradle, npm) almost always sits near the END of the
+    // file (final "Caused by" / "BUILD FAILED" summary), so head-only truncation was
+    // silently dropping exactly the lines the user needed to see.
+    private const val HEAD_CHARS = 100_000
+    private const val TAIL_CHARS = 100_000
+    private const val SKIPPED_MARKER_PREFIX =
+        "\n... [%d baris dilewati karena file besar — bagian akhir log di bawah ini " +
+            "biasanya berisi error/exception utama] ...\n\n"
     private val LOG_EXTENSIONS = setOf("log", "txt")
 
     /**
@@ -63,25 +72,53 @@ object ZipLogExtractor {
         }
     }
 
-    /** Reads the current ZIP entry's stream, capped at [MAX_CHARS] to stay memory-safe. */
+    /**
+     * Reads the current ZIP entry's stream, keeping the first [HEAD_CHARS] and the last
+     * [TAIL_CHARS] of text (total budget unchanged from before), so the analyzer always sees
+     * both the start of the log AND the final failure/exception block, instead of losing the
+     * tail entirely on large files.
+     */
     private fun readEntryCapped(input: InputStream): Triple<String, Int, Boolean>? {
         return try {
             val reader = BufferedReader(InputStreamReader(input, Charsets.UTF_8))
-            val sb = StringBuilder()
+            val head = StringBuilder()
+            val tailLines = ArrayDeque<String>()
+            var headLineCount = 0
+            var tailChars = 0
             var lineCount = 0
             var truncated = false
             var line: String?
 
             while (reader.readLine().also { line = it } != null) {
                 lineCount++
-                if (sb.length < MAX_CHARS) {
-                    sb.append(line).append('\n')
+                val current = line!!
+                if (head.length < HEAD_CHARS) {
+                    head.append(current).append('\n')
+                    headLineCount++
                 } else {
                     truncated = true
-                    // keep counting lines for accurate summary_metrics, but stop appending text
+                    tailLines.addLast(current)
+                    tailChars += current.length + 1
+                    // Keep the tail buffer bounded so we never hold more than TAIL_CHARS in
+                    // memory, no matter how huge the file is (drop oldest tail lines first).
+                    while (tailChars > TAIL_CHARS && tailLines.size > 1) {
+                        tailChars -= (tailLines.removeFirst().length + 1)
+                    }
                 }
             }
-            Triple(sb.toString(), lineCount, truncated)
+
+            val content = if (truncated) {
+                val skippedLineCount = (lineCount - headLineCount - tailLines.size).coerceAtLeast(0)
+                buildString {
+                    append(head)
+                    append(SKIPPED_MARKER_PREFIX.format(skippedLineCount))
+                    tailLines.forEach { append(it).append('\n') }
+                }
+            } else {
+                head.toString()
+            }
+
+            Triple(content, lineCount, truncated)
         } catch (e: IOException) {
             null
         }

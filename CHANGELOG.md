@@ -3,6 +3,32 @@
 Semua perubahan per-versi dicatat di sini (terbaru di atas). Untuk gambaran fitur saat ini &
 status roadmap, lihat `README.md`.
 
+## v1.8 — Bugfix: Hasil Analisis Melewatkan Error Utama
+Ditemukan lewat laporan user: hasil analisis (Offline & AI) hanya menampilkan bagian
+dasar/superfisial, error/exception utama tidak pernah muncul di laporan. Root cause-nya
+dua bug terpisah yang saling memperparah:
+
+- **`ZipLogExtractor.kt`** — file `.log`/`.txt` di dalam ZIP yang lebih besar dari 200KB
+  dulu dipotong dari **awal saja** (200KB pertama), sisanya dibuang total. Untuk log
+  GitHub Actions/Gradle/npm, kegagalan sebenarnya ("Caused by", "BUILD FAILED") hampir
+  selalu ada di **akhir** file — jadi justru bagian yang paling penting yang selama ini
+  hilang duluan sebelum sempat dianalisis. Diperbaiki: budget 200KB tetap sama, tapi
+  sekarang dibagi 100KB awal + 100KB akhir, dengan penanda baris yang dilewati di tengah.
+- **`LocalLogAnalyzer.kt`** — daftar `critical_events` dulu diambil dari 25 baris ERROR
+  **pertama saja** (`.take(25)`). Kalau log punya banyak error berulang/cascading di awal
+  (pola umum saat satu kegagalan memicu banyak pesan error turunan), kuota 25 itu habis oleh
+  duplikat sebelum sempat sampai ke error unik yang sebenarnya jadi akar masalah. Diperbaiki:
+  sekarang dedup pesan identik dulu, lalu kalau masih lebih dari 25, sampling diambil dari
+  awal DAN akhir (bukan awal saja).
+- Tidak ada perubahan skema JSON — `AiLogAnalyzer`/`LogPromptBuilder` tetap kompatibel persis,
+  dan otomatis ikut diuntungkan karena keduanya memakai `ExtractedLog.content` yang sama dari
+  `ZipLogExtractor`.
+- **Belum tersentuh** (di luar cakupan fix ini): jalur file teks biasa (bukan ZIP) untuk mode
+  Analisis AI (Cloud) — `contentBuilder` di `MainActivity.loadPlainTextFile()` masih terpotong
+  awal-saja untuk file >200KB. Tidak prioritas karena (a) mode Offline untuk file teks biasa
+  sudah menganalisis seluruh isi file tanpa potongan sama sekali, dan (b) fitur AI/Cloud memang
+  sengaja tidak diprioritaskan (lihat `PROJECT_STATE.md`).
+
 ## v1.7 — Batch 2a: Recent Files + Save/Share Hasil
 - `RecentFilesStore.kt`: hingga 10 file terakhir dibuka (nama + timestamp) disimpan lokal
   (SharedPreferences) — tombol baru **"Terkini"** di baris atas

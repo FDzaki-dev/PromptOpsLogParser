@@ -42,7 +42,7 @@ object LocalLogAnalyzer {
                 put("environment_or_source", environment ?: sourceName)
                 put("execution_status", status)
                 put("critical_events", JSONArray().apply {
-                    errorEntries.take(MAX_CRITICAL_EVENTS).forEach { entry ->
+                    selectCriticalEvents(errorEntries).forEach { entry ->
                         put(JSONObject().apply {
                             put("line_number", entry.lineNumber)
                             put("level", "ERROR")
@@ -58,6 +58,34 @@ object LocalLogAnalyzer {
             put("analysis_engine", "local-offline-v1")
         }
         return result.toString(2)
+    }
+
+    /**
+     * Picks which ERROR lines go into `critical_events`. A plain `.take(MAX_CRITICAL_EVENTS)`
+     * from the start used to bury the real failure: cascading/retried errors near the top of
+     * a long log (GitHub Actions, Gradle, npm) would fill the whole quota with near-duplicate
+     * noise, so the actual root cause — which in build/CI logs almost always sits in the final
+     * "Caused by" / "BUILD FAILED" block — never made it into the report at all.
+     *
+     * Fix: (1) drop exact-duplicate messages first, keeping only the first occurrence of each
+     * distinct error text, then (2) if still over budget, sample from BOTH ends of the log —
+     * head errors are often the first thrown exception, tail errors are usually the final
+     * failure summary — instead of only ever showing the earliest ones.
+     */
+    private fun selectCriticalEvents(errorEntries: List<LogEntry>): List<LogEntry> {
+        if (errorEntries.isEmpty()) return emptyList()
+
+        val deduped = LinkedHashMap<String, LogEntry>()
+        errorEntries.forEach { entry -> deduped.putIfAbsent(entry.rawText.trim(), entry) }
+        val unique = deduped.values.toList()
+
+        if (unique.size <= MAX_CRITICAL_EVENTS) return unique
+
+        val headCount = (MAX_CRITICAL_EVENTS * 2) / 5 // ~40% from the start
+        val tailCount = MAX_CRITICAL_EVENTS - headCount // ~60% from the end (root cause)
+        val head = unique.take(headCount)
+        val tail = unique.takeLast(tailCount)
+        return (head + tail).distinctBy { it.lineNumber }
     }
 
     private fun detectLogType(entries: List<LogEntry>): String {

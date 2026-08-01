@@ -5,7 +5,7 @@ mentah (`.txt`, `.log`, `.zip` archive dari GitHub Actions/logcat) agar mudah di
 Baris "Error"/"Exception"/"Fatal"/"Crash" disorot merah, "Warning"/"Deprecated" disorot kuning,
 kata kunci custom milik pengguna disorot ungu.
 
-**Status: v1.7 · Personal use only · Tidak akan dirilis ke Play Store**
+**Status: v1.8 · Personal use only · Tidak akan dirilis ke Play Store**
 
 > Riwayat lengkap setiap versi ada di [`CHANGELOG.md`](./CHANGELOG.md). File ini sengaja
 > dibuat ringkas & terkini — kalau kamu (Claude) memulai sesi baru untuk melanjutkan proyek
@@ -22,11 +22,13 @@ struktur ZIP, membatalkan commit kalau jumlah file turun drastis, memperbarui
 `FILE_MANIFEST.txt`, dan menampilkan ringkasan perubahan sebelum commit. Dibuat setelah
 insiden kehilangan isi repo pada 1 Agustus 2026 — detail lengkap ada di `PROJECT_STATE.md`.
 
-## Fitur Saat Ini (v1.7)
+## Fitur Saat Ini (v1.8)
 - Buka `.txt` / `.log` / `.zip` (auto-cari entri log pertama di dalam ZIP) via SAF
 - Highlight otomatis: Error (merah), Warning (kuning), Kata Kunci Custom (ungu, dikelola user)
 - Filter kata kunci real-time + toggle "Error/Exception & Custom saja"
-- Peringatan persisten kalau file besar (>200KB) terpotong
+- Peringatan persisten kalau file besar (>200KB) terpotong — **sejak v1.8, potongan menyisakan
+  bagian AWAL + AKHIR file** (bukan awal saja), karena error/exception utama di log CI/build
+  biasanya ada di bagian akhir
 - **Analisis Offline (Gratis)** — heuristik on-device, nol biaya, nol internet
 - **Analisis AI (Cloud)** — panggilan nyata ke Claude (Anthropic API), API key milik user sendiri
 - Riwayat 20 hasil analisis terakhir (offline & AI)
@@ -47,6 +49,7 @@ insiden kehilangan isi repo pada 1 Agustus 2026 — detail lengkap ada di `PROJE
 | 3 | Offline enhancement (custom keyword, riwayat analisis) | ✅ Selesai (v1.6) |
 | 4 | Troubleshooting sejati (crash log, dialog dinamis, copy log) | ✅ Selesai (v1.6) |
 | 5 | Kosmetik (app icon final, lokalisasi Inggris) | ✅ Selesai (v1.5) |
+| — | Bugfix: root cause hilang dari hasil analisis file ZIP besar | ✅ Selesai (v1.8) |
 
 **Sengaja di luar cakupan** (keputusan user): fitur AI/Cloud tidak diprioritaskan (khawatir
 biaya token, fokus ke mode Offline); item kesiapan rilis publik (privacy policy, aksesibilitas
