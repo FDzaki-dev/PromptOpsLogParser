@@ -9,7 +9,18 @@ kata kunci custom milik pengguna disorot ungu.
 
 > Riwayat lengkap setiap versi ada di [`CHANGELOG.md`](./CHANGELOG.md). File ini sengaja
 > dibuat ringkas & terkini — kalau kamu (Claude) memulai sesi baru untuk melanjutkan proyek
-> ini, baca file ini dulu sebelum bertanya ulang ke user soal fitur apa yang sudah ada.
+> ini, **baca [`PROJECT_STATE.md`](./PROJECT_STATE.md) dulu** (bootstrap khusus AI: keputusan
+> arsitektur, riwayat insiden, package map) sebelum bertanya ulang ke user soal fitur apa
+> yang sudah ada.
+
+## Update Project (WAJIB pakai script, bukan command manual)
+```
+bash ~/projects/PromptOpsLogParser/scripts/safe_update.sh
+```
+Script ini (lihat [`scripts/safe_update.sh`](./scripts/safe_update.sh)) otomatis mengecek
+struktur ZIP, membatalkan commit kalau jumlah file turun drastis, memperbarui
+`FILE_MANIFEST.txt`, dan menampilkan ringkasan perubahan sebelum commit. Dibuat setelah
+insiden kehilangan isi repo pada 1 Agustus 2026 — detail lengkap ada di `PROJECT_STATE.md`.
 
 ## Fitur Saat Ini (v1.7)
 - Buka `.txt` / `.log` / `.zip` (auto-cari entri log pertama di dalam ZIP) via SAF
@@ -53,8 +64,10 @@ Keystore rilis dikelola lewat GitHub Secrets: `ANDROID_KEYSTORE_BASE64`,
 Alias key: `promptopslogparser`.
 
 ## Workflow Update Standar (Termux)
-```
-LATEST_ZIP=$(ls -t ~/storage/downloads/PromptOpsLogParser*.zip | head -1) && echo "Pakai ZIP: $LATEST_ZIP" && cd ~/projects/PromptOpsLogParser && find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} + && cd ~/projects && unzip -o "$LATEST_ZIP" -d ~/projects/ && cd ~/projects/PromptOpsLogParser && git add -A && git commit -m "<ringkasan spesifik>" && git push
-```
+Pakai `scripts/safe_update.sh` (lihat bagian atas README ini) — jangan pakai command manual
+delete+unzip+commit lagi sejak insiden 1 Agustus 2026.
+
 **Kalau `git push` ditolak (rejected):** `git pull --no-rebase origin main --no-edit && git push`
 **Kalau merge conflict:** `git checkout --ours <file_yang_konflik>` lalu `git add <file>` → commit → push
+**Kalau `safe_update.sh` membatalkan commit karena file turun drastis:** cek `unzip -l` pada
+ZIP terbaru, pastikan root-nya folder `PromptOpsLogParser/`, lalu jalankan ulang script.
