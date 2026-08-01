@@ -45,4 +45,13 @@
     <string name="copied_toast">Disalin ke clipboard.</string>
     <string name="history_cleared_toast">Riwayat analisis dihapus.</string>
     <string name="events_cleared_toast">Kejadian terbaru dihapus.</string>
+    <string name="recent_files_button">Terkini</string>
+    <string name="recent_files_dialog_title">File Terkini</string>
+    <string name="recent_files_empty">Belum ada file yang pernah dibuka.</string>
+    <string name="recent_file_gone">Tidak bisa membuka file ini lagi (izin akses hilang). Dihapus dari daftar.</string>
+    <string name="recent_files_cleared_toast">Daftar file terkini dihapus.</string>
+    <string name="share">Bagikan</string>
+    <string name="save_to_file">Simpan sebagai File</string>
+    <string name="saved_toast">Hasil disimpan.</string>
+    <string name="toast_save_failed">Gagal menyimpan: %1$s</string>
 </resources>

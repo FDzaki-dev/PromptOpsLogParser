@@ -45,4 +45,13 @@
     <string name="copied_toast">Copied to clipboard.</string>
     <string name="history_cleared_toast">Analysis history cleared.</string>
     <string name="events_cleared_toast">Recent events cleared.</string>
+    <string name="recent_files_button">Recent</string>
+    <string name="recent_files_dialog_title">Recent Files</string>
+    <string name="recent_files_empty">No files opened yet.</string>
+    <string name="recent_file_gone">Can\'t open this file anymore (access permission lost). Removed from the list.</string>
+    <string name="recent_files_cleared_toast">Recent files list cleared.</string>
+    <string name="share">Share</string>
+    <string name="save_to_file">Save as File</string>
+    <string name="saved_toast">Result saved.</string>
+    <string name="toast_save_failed">Failed to save: %1$s</string>
 </resources>

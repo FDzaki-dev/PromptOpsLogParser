@@ -3,6 +3,19 @@
 Semua perubahan per-versi dicatat di sini (terbaru di atas). Untuk gambaran fitur saat ini &
 status roadmap, lihat `README.md`.
 
+## v1.7 — Batch 2a: Recent Files + Save/Share Hasil
+- `RecentFilesStore.kt`: hingga 10 file terakhir dibuka (nama + timestamp) disimpan lokal
+  (SharedPreferences) — tombol baru **"Terkini"** di baris atas
+  - `MainActivity.loadFile()` sekarang mengambil `takePersistableUriPermission` supaya URI tetap
+    bisa dibuka lagi setelah aplikasi di-restart
+  - Tap salah satu entri langsung membuka ulang file tsb; kalau izin akses sudah hilang
+    (mis. file dipindah/dihapus), entri otomatis dibersihkan dari daftar dengan Toast penjelasan
+- Dialog hasil Analisis (AI & Offline) kini punya dua tombol baru di baris aksi:
+  - **Bagikan**: `ACTION_SEND` teks biasa ke aplikasi lain (WhatsApp/Email/dll)
+  - **Simpan sebagai File**: `ACTION_CREATE_DOCUMENT` (SAF) menulis hasil sebagai `.json` ke lokasi
+    pilihan pengguna — tidak butuh permission storage tambahan
+- Tidak ada perubahan pada fondasi Copy ke Clipboard / Ganti API Key yang sudah ada
+
 ## v1.6 — Batch 4 (Troubleshooting Sejati) + Batch 3 (Offline Enhancement)
 **Batch 4:**
 - `AppDiagnostics.kt` + `CrashHandler.kt` + `PromptOpsApplication.kt`: crash handler global —

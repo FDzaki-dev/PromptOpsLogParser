@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -64,6 +65,25 @@ class MainActivity : AppCompatActivity() {
         uri?.let { loadFile(it) }
     }
 
+    /** Text awaiting write once the user picks a destination in [createDocumentLauncher]. */
+    private var pendingSaveText: String? = null
+
+    private val createDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        val text = pendingSaveText
+        pendingSaveText = null
+        if (uri != null && text != null) {
+            try {
+                contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+                Toast.makeText(this, getString(R.string.saved_toast), Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                AppDiagnostics.logEvent(this, "Gagal simpan hasil analisis: ${e.message}")
+                Toast.makeText(this, getString(R.string.toast_save_failed, e.message), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -112,6 +132,10 @@ class MainActivity : AppCompatActivity() {
             showHistoryDialog()
         }
 
+        binding.btnRecentFiles.setOnClickListener {
+            showRecentFilesDialog()
+        }
+
         customKeywords = CustomKeywordStore.getKeywords(this)
 
         renderEmptyState(true)
@@ -122,7 +146,21 @@ class MainActivity : AppCompatActivity() {
     // ---------------------------------------------------------------------
 
     private fun loadFile(uri: Uri) {
-        val fileName = DocumentFile.fromSingleUri(this, uri)?.name ?: ""
+        try {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (e: Exception) {
+            // Some providers don't support persistable permission (e.g. some cloud providers) —
+            // reading below will simply fail gracefully later if access is truly unavailable.
+        }
+
+        val fileName = try {
+            DocumentFile.fromSingleUri(this, uri)?.name ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+
+        RecentFilesStore.addRecent(this, uri.toString(), fileName.ifBlank { "log" })
+
         val isZip = fileName.endsWith(".zip", ignoreCase = true) ||
             contentResolver.getType(uri) == "application/zip"
 
@@ -423,20 +461,40 @@ class MainActivity : AppCompatActivity() {
             jsonText // fall back to raw text if the model didn't return clean JSON
         }
 
+        val padding = (16 * resources.displayMetrics.density).toInt()
+
         val scrollView = ScrollView(this)
         val textView = TextView(this).apply {
             text = pretty
             typeface = android.graphics.Typeface.MONOSPACE
             textSize = 12f
-            val padding = (16 * resources.displayMetrics.density).toInt()
-            setPadding(padding, padding, padding, padding)
+            setPadding(padding, padding, padding, padding / 2)
             setTextIsSelectable(true)
         }
         scrollView.addView(textView)
 
+        val actionRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(padding, 0, padding, padding / 4)
+        }
+        actionRow.addView(Button(this).apply {
+            text = getString(R.string.share)
+            setOnClickListener { shareResultText(title, pretty) }
+        })
+        actionRow.addView(Button(this).apply {
+            text = getString(R.string.save_to_file)
+            setOnClickListener { saveResultToFile(pretty) }
+        })
+
+        val outerContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(scrollView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+            addView(actionRow)
+        }
+
         val builder = AlertDialog.Builder(this)
             .setTitle(title)
-            .setView(scrollView)
+            .setView(outerContainer)
             .setPositiveButton(R.string.close) { dialog, _ -> dialog.dismiss() }
             .setNegativeButton(R.string.copy_to_clipboard) { dialog, _ ->
                 copyToClipboard(title, pretty)
@@ -457,6 +515,23 @@ class MainActivity : AppCompatActivity() {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
         Toast.makeText(this, getString(R.string.copied_toast), Toast.LENGTH_SHORT).show()
+    }
+
+    /** Shares the analysis result as plain text via any installed app (WhatsApp, Email, dll). */
+    private fun shareResultText(title: String, text: String) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, title)
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.share)))
+    }
+
+    /** Lets the user pick where to save the analysis result as a standalone .json file. */
+    private fun saveResultToFile(text: String) {
+        pendingSaveText = text
+        val fileName = "promptops_result_${System.currentTimeMillis()}.json"
+        createDocumentLauncher.launch(fileName)
     }
 
     // ---------------------------------------------------------------------
@@ -670,5 +745,66 @@ class MainActivity : AppCompatActivity() {
                 dialog.dismiss()
             }
             .show()
+    }
+
+    // ---------------------------------------------------------------------
+    // Recent Files (Batch 2)
+    // ---------------------------------------------------------------------
+
+    private fun showRecentFilesDialog() {
+        val entries = RecentFilesStore.getRecent(this)
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, padding / 2, padding, padding)
+        }
+
+        if (entries.isEmpty()) {
+            container.addView(TextView(this).apply {
+                text = getString(R.string.recent_files_empty)
+                setTextColor(resources.getColor(R.color.text_secondary, theme))
+                textSize = 13f
+            })
+        }
+
+        val scrollView = ScrollView(this).apply { addView(container) }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.recent_files_dialog_title)
+            .setView(scrollView)
+            .setPositiveButton(R.string.close) { d, _ -> d.dismiss() }
+            .setNegativeButton(R.string.clear_history) { d, _ ->
+                RecentFilesStore.clear(this)
+                Toast.makeText(this, getString(R.string.recent_files_cleared_toast), Toast.LENGTH_SHORT).show()
+                d.dismiss()
+            }
+            .create()
+
+        entries.forEach { entry ->
+            container.addView(TextView(this).apply {
+                text = "${entry.name}\n${entry.timestamp}"
+                setTextColor(resources.getColor(R.color.text_primary, theme))
+                textSize = 13f
+                setPadding(0, padding / 2, 0, padding / 2)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    dialog.dismiss()
+                    val uri = Uri.parse(entry.uri)
+                    try {
+                        loadFile(uri)
+                    } catch (e: Exception) {
+                        RecentFilesStore.remove(this@MainActivity, entry.uri)
+                        Toast.makeText(
+                            this@MainActivity,
+                            getString(R.string.recent_file_gone),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            })
+        }
+
+        dialog.show()
     }
 }
